@@ -1,0 +1,1 @@
+Ce plugin permet d'ajouter un lien de réponse aux commentaires à la manière de Twitter.
