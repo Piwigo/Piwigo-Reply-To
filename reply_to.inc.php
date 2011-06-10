@@ -25,7 +25,7 @@ function replyto_add_link()
   // must re-check our location + some additional tests
   if (script_basename() == 'picture')
   {
-    add_event_handler('render_comment_content', 'replyto_parse_picture', 10);
+    add_event_handler('render_comment_content', 'replyto_parse_picture', 60);
     if ( !is_a_guest() OR $conf['comments_forall'] )
     {
       $template->set_prefilter('picture', 'replyto_add_link_prefilter');
@@ -38,7 +38,7 @@ function replyto_add_link()
       $page['section'] == 'categories' AND isset($page['category'])
     )
   {
-    add_event_handler('render_comment_content', 'replyto_parse_album', 10);
+    add_event_handler('render_comment_content', 'replyto_parse_album', 60);
     if ( !is_a_guest() OR $conf['comments_forall'] )
     {
       $template->set_prefilter('comments_on_albums', 'replyto_add_link_prefilter');
