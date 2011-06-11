@@ -228,7 +228,6 @@ WHERE com.id = ' . $matches[1] . '
 function replyto_parse_picture_mail($comment)
 {
   $comment['content'] = replyto_parse_picture($comment['content']);
-  var_dump($comment);
   return $comment;
 }
 
