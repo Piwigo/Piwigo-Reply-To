@@ -26,6 +26,7 @@ function replyto_add_link()
   if (script_basename() == 'picture')
   {
     add_event_handler('render_comment_content', 'replyto_parse_picture', 60);
+    add_event_handler('user_comment_insertion', 'replyto_parse_picture_mail');
     if ( !is_a_guest() OR $conf['comments_forall'] )
     {
       $template->set_prefilter('picture', 'replyto_add_link_prefilter');
@@ -39,6 +40,7 @@ function replyto_add_link()
     )
   {
     add_event_handler('render_comment_content', 'replyto_parse_album', 60);
+    add_event_handler('user_comment_insertion', 'replyto_parse_album_mail');
     if ( !is_a_guest() OR $conf['comments_forall'] )
     {
       $template->set_prefilter('comments_on_albums', 'replyto_add_link_prefilter');
@@ -79,7 +81,7 @@ function replyto(commentID, author) {ldelim}
   $replace[1] = '
 {if not isset($comment.IN_EDIT)}
 <div class="actions" style="float:right;">
-  <a title="{\'reply to this comment\'|@translate}" class="replyTo" onclick="replyto(\'{$comment.ID}\', \'{$comment.AUTHOR}\');">&nbsp;</a>
+  <a href="#commentform" title="{\'reply to this comment\'|@translate}" class="replyTo" onclick="replyto(\'{$comment.ID}\', \'{$comment.AUTHOR}\');">&nbsp;</a>
 </div>
 {/if}'
 .$search[1];
@@ -90,6 +92,10 @@ function replyto(commentID, author) {ldelim}
 <a name="comment-{$comment.ID}"></a>'
 .$search[2];
 
+  $search[3] = '<legend>{\'Add a comment\'|@translate}</legend>';
+  $replace[3] = $search[3].'
+<a name="commentform"></a>';
+
   return str_replace($search, $replace, $content);
 }
 
@@ -99,7 +105,7 @@ function replyto(commentID, author) {ldelim}
  */
 function replyto_parse_picture($comment)
 {
-  if (preg_match('#\[reply=([1-9]+)\](.*)\[/reply\]#si', $comment, $matches))
+  if (preg_match('#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i', $comment, $matches))
   {
     // picture informations
     $query = '
@@ -140,12 +146,12 @@ WHERE id = ' . $image['category_id'] . '
         'image_file' => $image['file'],
       ));		  
       
-      $search = "#\[reply=([1-9]+)\](.*)\[/reply\]#si";
-      $replace = '@ <a href="'.$image['url'].'#comment-$1">$2</a> :';
+      $search = "#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i";
+      $replace = '@ <a href="'.get_absolute_root_url().$image['url'].'#comment-$1">$2</a> :';
     }
     else
     {
-      $search = "#\[reply=([1-9]+)\](.*)\[/reply\]#si";
+      $search = "#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i";
       $replace = '';
     }
     
@@ -159,11 +165,12 @@ WHERE id = ' . $image['category_id'] . '
 
 function replyto_parse_album($comment)
 {
-  if (preg_match('#\[reply=([1-9]+)\](.*)\[/reply\]#si', $comment, $matches))
+  if (preg_match('#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i', $comment, $matches))
   {  
     // check if the comment is really an album comment 
     // (both comments_on_albums script and default comments script are executed... 
     //  with the same 'render_comment_content' event)
+    ## THIS CAN INDUCE ERRORS, MUST FIND A BETTER WAY
     $query = '
 SELECT id
 FROM ' . COA_TABLE . '
@@ -198,12 +205,12 @@ WHERE com.id = ' . $matches[1] . '
         'category' => $category,
       ));		  
     
-      $search = "#\[reply=([1-9]+)\](.*)\[/reply\]#si";
-      $replace = '@ <a href="'.$category['url'].'#comment-$1">$2</a> :';
+      $search = "#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i";
+      $replace = '@ <a href="'.get_absolute_root_url().$category['url'].'#comment-$1">$2</a> :';
     }
     else
     {
-      $search = "#\[reply=([1-9]+)\](.*)\[/reply\]#si";
+      $search = "#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i";
       $replace = '';
     }
     
@@ -213,6 +220,22 @@ WHERE com.id = ' . $matches[1] . '
   {
     return $comment;
   }
+}
+
+/**
+ * Replace BBcode tag by a link in notification mails
+ */
+function replyto_parse_picture_mail($comment)
+{
+  $comment['content'] = replyto_parse_picture($comment['content']);
+  var_dump($comment);
+  return $comment;
+}
+
+function replyto_parse_album_mail($comment)
+{
+  $comment['content'] = replyto_parse_album($comment['content']);
+  return $comment;
 }
 
 ?>

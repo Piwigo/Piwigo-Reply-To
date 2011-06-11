@@ -28,6 +28,11 @@ else if (script_basename() == 'comments' AND !isset($_GET['display_mode']))
 {
   add_event_handler('render_comment_content', 'replyto_parse_picture', 60);
 }
+// parse comment admin side (picture section)
+else if (script_basename() == 'admin' AND isset($_GET['page']) AND $_GET['page'] == 'comments' AND ( !isset($_GET['section']) OR $_GET['section'] == 'pictures' ) )
+{
+  add_event_handler('render_comment_content', 'replyto_parse_picture', 60);
+}
 // add link and parse on album page (compatibility with Comment on Albums)
 else if (script_basename() == 'index')
 {
@@ -35,6 +40,11 @@ else if (script_basename() == 'index')
 }
 // parse on comments page (album section)
 else if (script_basename() == 'comments' AND $_GET['display_mode'] == 'albums')
+{
+  add_event_handler('render_comment_content', 'replyto_parse_album', 60);
+}
+// parse comment admin side (album section)
+else if (script_basename() == 'admin' AND isset($_GET['page']) AND $_GET['page'] == 'comments' AND $_GET['section'] == 'albums')
 {
   add_event_handler('render_comment_content', 'replyto_parse_album', 60);
 }
