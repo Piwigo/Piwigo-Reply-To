@@ -1,6 +1,8 @@
 <?php 
 if (!defined('PHPWG_ROOT_PATH')) die('Hacking attempt!');
 
+define('REPLYTO_REGEX', '#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i');
+
 /**
  * Add anchors and reply button to comments blocks
  */
@@ -21,12 +23,20 @@ function replyto_add_link()
   {
     $template->assign('replyto_form_name', 'addComment');
   }
-    
-  // must re-check our location + some additional tests
+  
+  // must check our location + some additional tests
+  // if (script_basename() == 'comments')
+  // {
+    // if ( !is_a_guest() OR $conf['comments_forall'] )
+    // {
+      // $template->set_prefilter('comments', 'replyto_add_link_prefilter');
+    // }
+  // }
+  // else 
   if (script_basename() == 'picture')
   {
-    add_event_handler('render_comment_content', 'replyto_parse_picture', 60);
     add_event_handler('user_comment_insertion', 'replyto_parse_picture_mail');
+    
     if ( !is_a_guest() OR $conf['comments_forall'] )
     {
       $template->set_prefilter('picture', 'replyto_add_link_prefilter');
@@ -34,13 +44,13 @@ function replyto_add_link()
   } 
   else if 
     (
-      script_basename() == 'index' AND 
+      script_basename() == 'index' AND isset($page['section']) AND
       isset($pwg_loaded_plugins['Comments_on_Albums']) AND 
       $page['section'] == 'categories' AND isset($page['category'])
     )
   {
-    add_event_handler('render_comment_content', 'replyto_parse_album', 60);
     add_event_handler('user_comment_insertion', 'replyto_parse_album_mail');
+    
     if ( !is_a_guest() OR $conf['comments_forall'] )
     {
       $template->set_prefilter('comments_on_albums', 'replyto_add_link_prefilter');
@@ -56,7 +66,7 @@ function replyto_add_link_prefilter($content, &$smarty)
 {combine_script id=\'insertAtCaret\' require=\'jquery\' path=$REPLYTO_PATH|@cat:\'insertAtCaret.js\'}
 
 {footer_script require=\'insertAtCaret\'}
-function replyto(commentID, author) {ldelim}
+function replyTo(commentID, author) {ldelim}
   jQuery("#{$replyto_form_name} textarea").insertAtCaret("[reply=" + commentID + "]" + author + "[/reply] ");
 }
 {/footer_script}
@@ -81,7 +91,7 @@ function replyto(commentID, author) {ldelim}
   $replace[1] = '
 {if not isset($comment.IN_EDIT)}
 <div class="actions" style="float:right;">
-  <a href="#commentform" title="{\'reply to this comment\'|@translate}" class="replyTo" onclick="replyto(\'{$comment.ID}\', \'{$comment.AUTHOR}\');">&nbsp;</a>
+  <a href="#commentform" title="{\'reply to this comment\'|@translate}" class="replyTo" onclick="replyTo(\'{$comment.ID}\', \'{$comment.AUTHOR}\');">&nbsp;</a>
 </div>
 {/if}'
 .$search[1];
@@ -103,12 +113,15 @@ function replyto(commentID, author) {ldelim}
 /**
  * Replace BBcode tag by a link with absolute url
  */
-function replyto_parse_picture($comment)
+function replyto_parse($comment, $in_album = false)
 {
-  if (preg_match('#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i', $comment, $matches))
-  {
-    // picture informations
-    $query = '
+  if (preg_match(REPLYTO_REGEX, $comment, $matches))
+  { 
+    /* try to parse a ReplyTo tag link for picture page */
+    if (!$in_album)
+    {
+      // picture informations
+      $query = '
 SELECT
   img.id,
   img.file,
@@ -120,15 +133,15 @@ INNER JOIN ' . COMMENTS_TABLE . ' AS com
   ON com.image_id = img.id
 WHERE com.id = ' . $matches[1] . '
 ;';
-    $result = pwg_query($query);
-    
-    // make sure the target comment exists
-    if (pwg_db_num_rows($result))
-    {
-      $image = pwg_db_fetch_assoc($result);
+      $result = pwg_query($query);
+      
+      // make sure the target comment exists
+      if (pwg_db_num_rows($result))
+      {
+        $image = pwg_db_fetch_assoc($result);
 
-      // retrieving category informations
-      $query = '
+        // retrieving category informations
+        $query = '
 SELECT 
   id, 
   name, 
@@ -137,52 +150,27 @@ SELECT
 FROM ' . CATEGORIES_TABLE . '
 WHERE id = ' . $image['category_id'] . '
 ;';
-      $image['cat'] = pwg_db_fetch_assoc(pwg_query($query));
+        $image['cat'] = pwg_db_fetch_assoc(pwg_query($query));
 
-      // link to the full size picture
-      $image['url'] = make_picture_url(array(
-        'category' => $image['cat'],
-        'image_id' => $image['id'],
-        'image_file' => $image['file'],
-      ));		  
-      
-      $search = "#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i";
-      $replace = '@ <a href="'.get_absolute_root_url().$image['url'].'#comment-$1">$2</a> :';
-    }
+        // link to the full size picture
+        $image['url'] = make_picture_url(array(
+          'category' => $image['cat'],
+          'image_id' => $image['id'],
+          'image_file' => $image['file'],
+        ));		  
+        
+        $replace = '@ <a href="'.get_absolute_root_url().$image['url'].'#comment-$1">$2</a> :';
+      }
+      else
+      {
+        $replace = '';
+      }
+    } 
+    /* try to parse a ReplyTo tag link for an album */
     else
-    {
-      $search = "#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i";
-      $replace = '';
-    }
-    
-    return preg_replace($search, $replace, $comment);
-  }
-  else
-  {
-    return $comment;
-  }
-}
-
-function replyto_parse_album($comment)
-{
-  if (preg_match('#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i', $comment, $matches))
-  {  
-    // check if the comment is really an album comment 
-    // (both comments_on_albums script and default comments script are executed... 
-    //  with the same 'render_comment_content' event)
-    ## THIS CAN INDUCE ERRORS, MUST FIND A BETTER WAY
-    $query = '
-SELECT id
-FROM ' . COA_TABLE . '
-WHERE content = "' . $comment .'"
-;';
-    if (!pwg_db_num_rows(pwg_query($query)))
-    {
-      return $comment;
-    }
-    
-    // retrieving category informations
-    $query = '
+    {    
+      // retrieving category informations
+      $query = '
 SELECT
   cat.id, 
   cat.name, 
@@ -193,28 +181,27 @@ INNER JOIN ' . CATEGORIES_TABLE . ' AS cat
   ON cat.id = com.category_id
 WHERE com.id = ' . $matches[1] . '
 ;';
-    $result = pwg_query($query);
-    
-    // make sure the target comment exists
-    if (pwg_db_num_rows($result))
-    {
-      $category = pwg_db_fetch_assoc($result);
+      $result = pwg_query($query);
+      
+      // make sure the target comment exists
+      if (pwg_db_num_rows($result))
+      {
+        $category = pwg_db_fetch_assoc($result);
 
-      // link to the album
-      $category['url'] = make_index_url(array(
-        'category' => $category,
-      ));		  
-    
-      $search = "#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i";
-      $replace = '@ <a href="'.get_absolute_root_url().$category['url'].'#comment-$1">$2</a> :';
+        // link to the album
+        $category['url'] = make_index_url(array(
+          'category' => $category,
+        ));		  
+      
+        $replace = '@ <a href="'.get_absolute_root_url().$category['url'].'#comment-$1">$2</a> :';
+      }
+      else
+      {
+        $replace = '';
+      }
     }
-    else
-    {
-      $search = "#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i";
-      $replace = '';
-    }
-    
-    return preg_replace($search, $replace, $comment);
+  
+    return preg_replace(REPLYTO_REGEX, $replace, $comment);
   }
   else
   {
@@ -227,13 +214,13 @@ WHERE com.id = ' . $matches[1] . '
  */
 function replyto_parse_picture_mail($comment)
 {
-  $comment['content'] = replyto_parse_picture($comment['content']);
+  $comment['content'] = replyto_parse($comment['content']);
   return $comment;
 }
 
 function replyto_parse_album_mail($comment)
 {
-  $comment['content'] = replyto_parse_album($comment['content']);
+  $comment['content'] = replyto_parse($comment['content'], 'album');
   return $comment;
 }
 
