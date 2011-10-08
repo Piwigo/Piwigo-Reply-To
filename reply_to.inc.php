@@ -8,7 +8,7 @@ define('REPLYTO_REGEX', '#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i');
  */
 function replyto_add_link()
 {
-  global $pwg_loaded_plugins, $template, $page, $conf;
+  global $pwg_loaded_plugins, $template, $page, $conf, $lang;
   $template->assign('REPLYTO_PATH', REPLYTO_PATH);
   
   // comment form has different id
@@ -24,16 +24,15 @@ function replyto_add_link()
     $template->assign('replyto_form_name', 'addComment');
   }
   
-  // must check our location + some additional tests
-  // if (script_basename() == 'comments')
-  // {
-    // if ( !is_a_guest() OR $conf['comments_forall'] )
-    // {
-      // $template->set_prefilter('comments', 'replyto_add_link_prefilter');
-    // }
-  // }
-  // else 
-  if (script_basename() == 'picture')
+  // must check our location
+  if (script_basename() == 'comments') /* COMMENTS page */
+  {
+    if ( !is_a_guest() OR $conf['comments_forall'] )
+    {
+      $template->set_prefilter('comments', 'replyto_add_link_comments_prefilter');
+    }
+  }
+  else if (script_basename() == 'picture') /* PICTURE page */
   {
     add_event_handler('user_comment_insertion', 'replyto_parse_picture_mail');
     
@@ -42,7 +41,7 @@ function replyto_add_link()
       $template->set_prefilter('picture', 'replyto_add_link_prefilter');
     }
   } 
-  else if 
+  else if /* ALBUM page */
     (
       script_basename() == 'index' AND isset($page['section']) AND
       isset($pwg_loaded_plugins['Comments_on_Albums']) AND 
@@ -56,11 +55,71 @@ function replyto_add_link()
       $template->set_prefilter('comments_on_albums', 'replyto_add_link_prefilter');
     }
   }
+  
+  /* we come from comments.php page */
+  if ( !empty($_GET['reply_to']) and !empty($_GET['reply_to_a']) )
+  {
+    $lang['Comment'].= '
+    <script type="text/javascript">
+      $(document).ready(function(){
+        jQuery("#'.$template->get_template_vars('replyto_form_name').' textarea").insertAtCaret("[reply='.$_GET['reply_to'].']'.$_GET['reply_to_a'].'[/reply] ");
+      });
+    </script>';
+  }
 }
 
+/**
+ * links to commentform on comments.php page
+ */
+function replyto_add_link_comments_prefilter($content, &$smarty)
+{
+  global $template;
+  $comments = $template->get_template_vars('comments');
+  
+  foreach ($comments as $tpl_var)
+  {
+    $replyto_links[ $tpl_var['ID'] ] = get_absolute_root_url().$tpl_var['U_PICTURE'].'&reply_to='.$tpl_var['ID'].'&reply_to_a='.$tpl_var['AUTHOR'].'#commentform';
+  }
+  
+  $template->assign('replyto_links', $replyto_links);
+  
+    // style
+  $search[0] = '<ul class="thumbnailCategories">';
+  $replace[0] = '
+{html_head}
+<style type="text/css">
+  .replyTo {ldelim}
+    display:inline-block;
+    width:16px;
+    height:16px;
+    background:url({$REPLYTO_PATH}reply.png) center top no-repeat;
+  }
+  .replyTo:hover {ldelim}
+    background-position:center -16px;
+  }
+</style>
+{/html_head}'
+.$search[0];
+
+  // button
+  $search[1] = '<span class="author">';
+  $replace[1] = '
+{if not isset($comment.IN_EDIT)}
+<div class="actions" style="float:right;">
+  <a href="{$replyto_links[$comment.ID]}" title="{\'reply to this comment\'|@translate}" class="replyTo">&nbsp;</a>
+</div>
+{/if}'
+.$search[1];
+  
+  return str_replace($search, $replace, $content);
+}
+
+/**
+ * links to commentform on picture.php (and index.php) page(s)
+ */
 function replyto_add_link_prefilter($content, &$smarty)
 {
-  // script
+  // script & style
   $search[0] = '<ul class="thumbnailCategories">';
   $replace[0] = '
 {combine_script id=\'insertAtCaret\' require=\'jquery\' path=$REPLYTO_PATH|@cat:\'insertAtCaret.js\'}
@@ -167,7 +226,7 @@ WHERE id = ' . $image['category_id'] . '
       }
     } 
     /* try to parse a ReplyTo tag link for an album */
-    else
+    else if ( $in_album == 'album')
     {    
       // retrieving category informations
       $query = '
