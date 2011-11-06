@@ -76,6 +76,8 @@ function replyto_add_link_comments_prefilter($content, &$smarty)
   global $template;
   $comments = $template->get_template_vars('comments');
   
+  if (!count($comments)) return $content;
+  
   foreach ($comments as $tpl_var)
   {
     $replyto_links[ $tpl_var['ID'] ] = get_absolute_root_url().$tpl_var['U_PICTURE'].'&reply_to='.$tpl_var['ID'].'&reply_to_a='.$tpl_var['AUTHOR'].'#commentform';
