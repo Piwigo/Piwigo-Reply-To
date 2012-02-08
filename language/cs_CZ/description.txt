@@ -1,0 +1,1 @@
+Tento plugin umožňuje přidat ke komentářům odkazy ve stylu odpovědí ve Twitteru.
