@@ -1,0 +1,1 @@
+Detta plugin kan du l&auml;gga till Twitter-liknande svar l&auml;nkar till kommentarer.
