@@ -1,0 +1,1 @@
+Diese Erweiterung erlaubt es, Twitter-ähnliche Antwortlinks zu Kommentaren zu hinterlassen.
