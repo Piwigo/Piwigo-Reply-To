@@ -1,0 +1,1 @@
+Tento doplnok povoľuje prid&aacute;vať Twitter-like reply linky na koment&aacute;re
