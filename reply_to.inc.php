@@ -10,6 +10,7 @@ function replyto_add_link()
 {
   global $pwg_loaded_plugins, $template, $page, $conf, $lang;
   $template->assign('REPLYTO_PATH', REPLYTO_PATH);
+  $location = null;
   
   // comment form has different id
   if (
@@ -24,16 +25,28 @@ function replyto_add_link()
     $template->assign('replyto_form_name', 'addComment');
   }
   
-  // must check our location
-  if (script_basename() == 'comments') /* COMMENTS page */
+  /* COMMENTS page */
+  if (script_basename() == 'comments') 
   {
     if ( !is_a_guest() OR $conf['comments_forall'] )
     {
+      $comments = &$template->get_template_vars('comments');
+      if (!count($comments)) return;
+      
+      // generates urls to picture or albums with necessary url params
+      foreach ($comments as $tpl_var)
+      {
+        $replyto_links[ $tpl_var['ID'] ] = get_absolute_root_url().$tpl_var['U_PICTURE'].'&amp;rt='.$tpl_var['ID'].'&amp;rta='.$tpl_var['AUTHOR'].'#commentform';
+      }
+      
+      $template->assign('replyto_links', $replyto_links);
       $template->set_prefilter('comments', 'replyto_add_link_comments_prefilter');
     }
   }
-  else if (script_basename() == 'picture') /* PICTURE page */
+  /* PICTURE page */
+  else if (script_basename() == 'picture') 
   {
+    $location = 'picture';
     add_event_handler('user_comment_insertion', 'replyto_parse_picture_mail');
     
     if ( !is_a_guest() OR $conf['comments_forall'] )
@@ -41,13 +54,15 @@ function replyto_add_link()
       $template->set_prefilter('picture', 'replyto_add_link_prefilter');
     }
   } 
-  else if /* ALBUM page */
+  /* ALBUM page */
+  else if 
     (
       script_basename() == 'index' AND isset($page['section']) AND
       isset($pwg_loaded_plugins['Comments_on_Albums']) AND 
       $page['section'] == 'categories' AND isset($page['category'])
     )
   {
+    $location = 'album';
     add_event_handler('user_comment_insertion', 'replyto_parse_album_mail');
     
     if ( !is_a_guest() OR $conf['comments_forall'] )
@@ -56,73 +71,69 @@ function replyto_add_link()
     }
   }
   
+
   /* we come from comments.php page */
-  if ( !empty($_GET['reply_to']) and !empty($_GET['reply_to_a']) )
+  if ( !empty($_GET['rt']) and !empty($_GET['rta']) )
   {
-    $lang['Comment'].= '
-    <script type="text/javascript">
-      $(document).ready(function(){
-        jQuery("#'.$template->get_template_vars('replyto_form_name').' textarea").insertAtCaret("[reply='.$_GET['reply_to'].']'.$_GET['reply_to_a'].'[/reply] ");
-      });
-    </script>';
+    if ($location == 'picture')
+    {
+      $template->set_prefilter('picture', 'replyto_fillform_prefilter');
+    }
+    else
+    {
+      $template->set_prefilter('comments_on_albums', 'replyto_fillform_prefilter');
+    }    
   }
 }
 
 /**
- * links to commentform on comments.php page
+ * add reply tag from values given in url
+ */
+function replyto_fillform_prefilter($content, &$smarty)
+{
+  $search = '<ul class="commentsList">';
+  $replace = '{footer_script require=\'insertAtCaret\'}replyTo("'.$_GET['rt'].'", "'.$_GET['rta'].'");{/footer_script}'.$search;
+  return str_replace($search, $replace, $content);
+}
+
+/**
+ * reply buttons on comments.php page
  */
 function replyto_add_link_comments_prefilter($content, &$smarty)
-{
-  global $template;
-  $comments = $template->get_template_vars('comments');
-  
-  if (!count($comments)) return $content;
-  
-  foreach ($comments as $tpl_var)
-  {
-    $replyto_links[ $tpl_var['ID'] ] = get_absolute_root_url().$tpl_var['U_PICTURE'].'&reply_to='.$tpl_var['ID'].'&reply_to_a='.$tpl_var['AUTHOR'].'#commentform';
-  }
-  
-  $template->assign('replyto_links', $replyto_links);
-  
-    // style
-  $search[0] = '<ul class="thumbnailCategories">';
+{ 
+  // style
+  $search[0] = '<ul class="commentsList">';
   $replace[0] = '
 {html_head}
 <style type="text/css">
   .replyTo {ldelim}
     display:inline-block;
-    width:16px;
+    background:url({$REPLYTO_PATH}reply.png) left top no-repeat;
     height:16px;
-    background:url({$REPLYTO_PATH}reply.png) center top no-repeat;
+    margin-left:20px;
+    padding-left:20px;
   }
   .replyTo:hover {ldelim}
-    background-position:center -16px;
+    background-position:left -16px;
   }
 </style>
 {/html_head}'
 .$search[0];
 
   // button
-  $search[1] = '<span class="author">';
-  $replace[1] = '
-{if not isset($comment.IN_EDIT)}
-<div class="actions" style="float:right;">
-  <a href="{$replyto_links[$comment.ID]}" title="{\'reply to this comment\'|@translate}" class="replyTo">&nbsp;</a>
-</div>
-{/if}'
-.$search[1];
+  $search[1] = '<span class="commentDate">{$comment.DATE}</span>';
+  $replace[1] = $search[1].'<a href="{$replyto_links[$comment.ID]}" class="replyTo">{\'Reply\'|@translate}</a>';
   
   return str_replace($search, $replace, $content);
 }
 
 /**
- * links to commentform on picture.php (and index.php) page(s)
+ * reply buttons on picture.php and index.php pages
  */
 function replyto_add_link_prefilter($content, &$smarty)
 {
   // script & style
-  $search[0] = '<ul class="thumbnailCategories">';
+  $search[0] = '<ul class="commentsList">';
   $replace[0] = '
 {combine_script id=\'insertAtCaret\' require=\'jquery\' path=$REPLYTO_PATH|@cat:\'insertAtCaret.js\'}
 
@@ -136,36 +147,28 @@ function replyTo(commentID, author) {ldelim}
 <style type="text/css">
   .replyTo {ldelim}
     display:inline-block;
-    width:16px;
+    background:url({$REPLYTO_PATH}reply.png) left top no-repeat;
     height:16px;
-    background:url({$REPLYTO_PATH}reply.png) center top no-repeat;
+    margin-left:20px;
+    padding-left:20px;
   }
   .replyTo:hover {ldelim}
-    background-position:center -16px;
+    background-position:left -16px;
   }
 </style>
 {/html_head}'
 .$search[0];
 
   // button
-  $search[1] = '<span class="author">';
-  $replace[1] = '
-{if not isset($comment.IN_EDIT)}
-<div class="actions" style="float:right;">
-  <a href="#commentform" title="{\'reply to this comment\'|@translate}" class="replyTo" onclick="replyTo(\'{$comment.ID}\', \'{$comment.AUTHOR}\');">&nbsp;</a>
-</div>
-{/if}'
-.$search[1];
+  $search[1] = '<span class="commentDate">{$comment.DATE}</span>';
+  $replace[1] = $search[1].'<a href="#commentform" class="replyTo" onclick="replyTo(\'{$comment.ID}\', \'{$comment.AUTHOR}\');">{\'Reply\'|@translate}</a>';
   
-  // anchor
-  $search[2] = '<div class="thumbnailCategory';
-  $replace[2] = '
-<a name="comment-{$comment.ID}"></a>'
-.$search[2];
+  // anchors
+  $search[2] = '<li class="commentElement';
+  $replace[2] = '<a name="comment-{$comment.ID}"></a>'.$search[2];
 
-  $search[3] = '<legend>{\'Add a comment\'|@translate}</legend>';
-  $replace[3] = $search[3].'
-<a name="commentform"></a>';
+  $search[3] = '<div id="commentAdd">';
+  $replace[3] = $search[3].'<a name="commentform"></a>';
 
   return str_replace($search, $replace, $content);
 }
@@ -184,15 +187,15 @@ function replyto_parse($comment, $in_album = false)
       // picture informations
       $query = '
 SELECT
-  img.id,
-  img.file,
-  cat.category_id
-FROM ' . IMAGES_TABLE . ' AS img
-INNER JOIN ' . IMAGE_CATEGORY_TABLE . ' AS cat
-  ON cat.image_id = img.id
-INNER JOIN ' . COMMENTS_TABLE . ' AS com
-  ON com.image_id = img.id
-WHERE com.id = ' . $matches[1] . '
+    img.id,
+    img.file,
+    cat.category_id
+  FROM ' . IMAGES_TABLE . ' AS img
+    INNER JOIN ' . IMAGE_CATEGORY_TABLE . ' AS cat
+      ON cat.image_id = img.id
+    INNER JOIN ' . COMMENTS_TABLE . ' AS com
+      ON com.image_id = img.id
+  WHERE com.id = ' . $matches[1] . '
 ;';
       $result = pwg_query($query);
       
@@ -204,12 +207,12 @@ WHERE com.id = ' . $matches[1] . '
         // retrieving category informations
         $query = '
 SELECT 
-  id, 
-  name, 
-  permalink, 
-  uppercats
-FROM ' . CATEGORIES_TABLE . '
-WHERE id = ' . $image['category_id'] . '
+    id, 
+    name, 
+    permalink, 
+    uppercats
+  FROM ' . CATEGORIES_TABLE . '
+  WHERE id = ' . $image['category_id'] . '
 ;';
         $image['cat'] = pwg_db_fetch_assoc(pwg_query($query));
 
@@ -233,14 +236,14 @@ WHERE id = ' . $image['category_id'] . '
       // retrieving category informations
       $query = '
 SELECT
-  cat.id, 
-  cat.name, 
-  cat.permalink, 
-  cat.uppercats
-FROM ' . COA_TABLE . ' AS com
-INNER JOIN ' . CATEGORIES_TABLE . ' AS cat
-  ON cat.id = com.category_id
-WHERE com.id = ' . $matches[1] . '
+    cat.id, 
+    cat.name, 
+    cat.permalink, 
+    cat.uppercats
+  FROM ' . COA_TABLE . ' AS com
+    INNER JOIN ' . CATEGORIES_TABLE . ' AS cat
+      ON cat.id = com.category_id
+  WHERE com.id = ' . $matches[1] . '
 ;';
       $result = pwg_query($query);
       
