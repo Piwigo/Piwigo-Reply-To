@@ -107,11 +107,14 @@ function replyto_add_link_comments_prefilter($content, &$smarty)
 {html_head}
 <style type="text/css">
   .replyTo {ldelim}
-    display:inline-block;
+    display:none;
     background:url({$REPLYTO_PATH}reply.png) left top no-repeat;
     height:16px;
     margin-left:20px;
     padding-left:20px;
+  }
+  li.commentElement:hover .replyTo {ldelim}
+    display:inline;
   }
   .replyTo:hover {ldelim}
     background-position:left -16px;
@@ -146,11 +149,14 @@ function replyTo(commentID, author) {ldelim}
 {html_head}
 <style type="text/css">
   .replyTo {ldelim}
-    display:inline-block;
+    display:none;
     background:url({$REPLYTO_PATH}reply.png) left top no-repeat;
     height:16px;
     margin-left:20px;
     padding-left:20px;
+  }
+  li.commentElement:hover .replyTo {ldelim}
+    display:inline;
   }
   .replyTo:hover {ldelim}
     background-position:left -16px;
