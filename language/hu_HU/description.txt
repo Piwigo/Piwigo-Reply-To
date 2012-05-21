@@ -1,1 +1,1 @@
-Ez a plugin lehetővé teszi Twitter-tetszik válasz link hozzáadását a kommentekhez.
+Ez a bővítmény lehetővé teszi Twitter-tetszik válasz link hozzáadását a kommentekhez.
