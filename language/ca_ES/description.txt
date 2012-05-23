@@ -1,0 +1,1 @@
+Aquest complement permet afegir enllaços de resposta en els comentaris a l'estil de Twitter
