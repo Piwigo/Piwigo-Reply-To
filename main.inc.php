@@ -15,11 +15,16 @@ global $page;
 define('REPLYTO_DIR' , basename(dirname(__FILE__)));
 define('REPLYTO_PATH' , PHPWG_PLUGINS_PATH . REPLYTO_DIR . '/');
 
-include_once(REPLYTO_PATH.'reply_to.inc.php');
-load_language('plugin.lang', REPLYTO_PATH);
+add_event_handler('init', 'replyto_init');
 
-add_event_handler('render_comment_content', 'replyto_parse', 60, 2);
-if (script_basename() == 'comments') add_event_handler('loc_after_page_header', 'replyto_add_link');
-else add_event_handler('loc_end_section_init', 'replyto_add_link');
+function replyto_init()
+{
+  include_once(REPLYTO_PATH.'reply_to.inc.php');
+  load_language('plugin.lang', REPLYTO_PATH);
+
+  add_event_handler('render_comment_content', 'replyto_parse', 60, 2);
+  if (script_basename() == 'comments') add_event_handler('loc_after_page_header', 'replyto_add_link');
+  else add_event_handler('loc_end_section_init', 'replyto_add_link');
+}
     
 ?>
