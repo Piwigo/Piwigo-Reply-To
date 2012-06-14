@@ -1,1 +1,1 @@
-Detta plugin kan du l&auml;gga till Twitter-liknande svar l&auml;nkar till kommentarer.
+Med denna insticksmodul kan du lägga till Twitter-liknande svarslänkar till kommentarer.
