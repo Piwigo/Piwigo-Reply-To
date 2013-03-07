@@ -36,7 +36,13 @@ function replyto_add_link()
       // generates urls to picture or albums with necessary url params
       foreach ($comments as $tpl_var)
       {
-        $replyto_links[ $tpl_var['ID'] ] = get_absolute_root_url().$tpl_var['U_PICTURE'].'&amp;rt='.$tpl_var['ID'].'&amp;rta='.$tpl_var['AUTHOR'].'#commentform';
+        $replyto_links[ $tpl_var['ID'] ] = add_url_params(
+          $tpl_var['U_PICTURE'],
+          array(
+            'rt' => $tpl_var['ID'],
+            'rta' =>$tpl_var['AUTHOR'],
+            )
+          ).'#commentform';
       }
       
       $template->assign('replyto_links', $replyto_links);
@@ -108,7 +114,7 @@ function replyto_add_link_comments_prefilter($content, &$smarty)
 <style type="text/css">
   .replyTo {ldelim}
     display:none;
-    background:url({$REPLYTO_PATH}reply.png) left top no-repeat;
+    background:url({$ROOT_URL}{$REPLYTO_PATH}reply.png) left top no-repeat;
     height:16px;
     margin-left:20px;
     padding-left:20px;
@@ -150,7 +156,7 @@ function replyTo(commentID, author) {ldelim}
 <style type="text/css">
   .replyTo {ldelim}
     display:none;
-    background:url({$REPLYTO_PATH}reply.png) left top no-repeat;
+    background:url({$ROOT_URL}{$REPLYTO_PATH}reply.png) left top no-repeat;
     height:16px;
     margin-left:20px;
     padding-left:20px;
@@ -227,9 +233,9 @@ SELECT
           'category' => $image['cat'],
           'image_id' => $image['id'],
           'image_file' => $image['file'],
-        ));		  
+        ));
         
-        $replace = '@ <a href="'.get_absolute_root_url().$image['url'].'#comment-$1">$2</a> :';
+        $replace = '@ <a href="'.$image['url'].'#comment-$1">$2</a> :';
       }
       else
       {
@@ -261,9 +267,9 @@ SELECT
         // link to the album
         $category['url'] = make_index_url(array(
           'category' => $category,
-        ));		  
+        ));
       
-        $replace = '@ <a href="'.get_absolute_root_url().$category['url'].'#comment-$1">$2</a> :';
+        $replace = '@ <a href="'.$category['url'].'#comment-$1">$2</a> :';
       }
       else
       {
