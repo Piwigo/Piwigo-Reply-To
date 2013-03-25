@@ -1,0 +1,1 @@
+Dette tilleggsprogrammet gir deg tilgang til å legge til Twitter-lignende svarlenker til kommentarer.
