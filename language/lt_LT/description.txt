@@ -1,0 +1,1 @@
+Šis priedas leidžia pridėti Twitter tipo atsakymo nuorodas į komentarus.
