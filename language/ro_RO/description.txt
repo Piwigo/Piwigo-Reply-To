@@ -1,0 +1,1 @@
+Acest plugin îți permite să adaugi răspunsuri la comentarii cu legături in stilul Twitter.
