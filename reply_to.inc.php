@@ -1,5 +1,5 @@
 <?php 
-if (!defined('PHPWG_ROOT_PATH')) die('Hacking attempt!');
+defined('REPLYTO_PATH') or die('Hacking attempt!');
 
 define('REPLYTO_REGEX', '#\[reply=([0-9]+)\]([^\[\]]*)\[/reply\]#i');
 
@@ -10,12 +10,11 @@ function replyto_add_link()
 {
   global $pwg_loaded_plugins, $template, $page, $conf, $lang;
   $template->assign('REPLYTO_PATH', REPLYTO_PATH);
-  $location = null;
   
   // comment form has different id
   if (
-    (isset($_GET['action']) AND $_GET['action'] == 'edit_comment') OR 
-    (isset($page['body_id']) AND $page['body_id'] == 'theCommentsPage')
+    (isset($_GET['action']) and $_GET['action'] == 'edit_comment') or 
+    (isset($page['body_id']) and $page['body_id'] == 'theCommentsPage')
     ) 
   {
     $template->assign('replyto_form_name', 'editComment');
@@ -28,10 +27,13 @@ function replyto_add_link()
   /* COMMENTS page */
   if (script_basename() == 'comments') 
   {
-    if ( !is_a_guest() OR $conf['comments_forall'] )
+    if (!is_a_guest() or $conf['comments_forall'])
     {
-      $comments = &$template->get_template_vars('comments');
-      if (!count($comments)) return;
+      $comments = $template->get_template_vars('comments');
+      if (!count($comments))
+      {
+        return;
+      }
       
       // generates urls to picture or albums with necessary url params
       foreach ($comments as $tpl_var)
@@ -45,6 +47,8 @@ function replyto_add_link()
           ).'#commentform';
       }
       
+      var_dump($replyto_links);
+      
       $template->assign('replyto_links', $replyto_links);
       $template->set_prefilter('comments', 'replyto_add_link_comments_prefilter');
     }
@@ -52,26 +56,23 @@ function replyto_add_link()
   /* PICTURE page */
   else if (script_basename() == 'picture') 
   {
-    $location = 'picture';
     add_event_handler('user_comment_insertion', 'replyto_parse_picture_mail');
     
-    if ( !is_a_guest() OR $conf['comments_forall'] )
+    if (!is_a_guest() or $conf['comments_forall'])
     {
       $template->set_prefilter('picture', 'replyto_add_link_prefilter');
     }
   } 
   /* ALBUM page */
-  else if 
-    (
-      script_basename() == 'index' AND isset($page['section']) AND
-      isset($pwg_loaded_plugins['Comments_on_Albums']) AND 
-      $page['section'] == 'categories' AND isset($page['category'])
+  else if (
+      script_basename() == 'index' and isset($page['section']) and
+      isset($pwg_loaded_plugins['Comments_on_Albums']) and 
+      $page['section'] == 'categories' and isset($page['category'])
     )
   {
-    $location = 'album';
     add_event_handler('user_comment_insertion', 'replyto_parse_album_mail');
     
-    if ( !is_a_guest() OR $conf['comments_forall'] )
+    if (!is_a_guest() or $conf['comments_forall'])
     {
       $template->set_prefilter('comments_on_albums', 'replyto_add_link_prefilter');
     }
@@ -79,59 +80,39 @@ function replyto_add_link()
   
 
   /* we come from comments.php page */
-  if ( !empty($_GET['rt']) and !empty($_GET['rta']) )
+  if (!empty($_GET['rt']) and !empty($_GET['rta']))
   {
-    if ($location == 'picture')
-    {
-      $template->set_prefilter('picture', 'replyto_fillform_prefilter');
-    }
-    else
-    {
-      $template->set_prefilter('comments_on_albums', 'replyto_fillform_prefilter');
-    }    
+    $template->func_combine_script(array('id'=>'insertAtCaret', 'path'=>REPLYTO_PATH.'insertAtCaret.js'));
+    $template->block_footer_script(array('require'=>'insertAtCaret'), 'replyTo("'.$_GET['rt'].'", "'.$_GET['rta'].'");');
   }
-}
-
-/**
- * add reply tag from values given in url
- */
-function replyto_fillform_prefilter($content, &$smarty)
-{
-  $search = '<ul class="commentsList">';
-  $replace = '{footer_script require=\'insertAtCaret\'}replyTo("'.$_GET['rt'].'", "'.$_GET['rta'].'");{/footer_script}'.$search;
-  return str_replace($search, $replace, $content);
 }
 
 /**
  * reply buttons on comments.php page
  */
-function replyto_add_link_comments_prefilter($content, &$smarty)
+function replyto_add_link_comments_prefilter($content)
 { 
   // style
-  $search[0] = '<ul class="commentsList">';
-  $replace[0] = '
-{html_head}
-<style type="text/css">
-  .replyTo {ldelim}
-    display:none;
-    background:url({$ROOT_URL}{$REPLYTO_PATH}reply.png) left top no-repeat;
-    height:16px;
-    margin-left:20px;
-    padding-left:20px;
-  }
-  li.commentElement:hover .replyTo {ldelim}
-    display:inline;
-  }
-  .replyTo:hover {ldelim}
-    background-position:left -16px;
-  }
-</style>
-{/html_head}'
-.$search[0];
+  $content.= '
+{html_style}
+.replyTo {
+  display:none;
+  background:url({$ROOT_URL}{$REPLYTO_PATH}reply.png) left top no-repeat;
+  height:16px;
+  margin-left:20px;
+  padding-left:20px;
+}
+li.commentElement:hover .replyTo {
+  display:inline;
+}
+.replyTo:hover {
+  background-position:left -16px;
+}
+{/html_style}';
 
   // button
-  $search[1] = '<span class="commentDate">{$comment.DATE}</span>';
-  $replace[1] = $search[1].'<a href="{$replyto_links[$comment.ID]}" class="replyTo">{\'Reply\'|@translate}</a>';
+  $search = '<span class="commentDate">{$comment.DATE}</span>';
+  $replace = $search.'<a href="{$replyto_links[$comment.ID]}" class="replyTo">{\'Reply\'|@translate}</a>';
   
   return str_replace($search, $replace, $content);
 }
@@ -142,34 +123,30 @@ function replyto_add_link_comments_prefilter($content, &$smarty)
 function replyto_add_link_prefilter($content, &$smarty)
 {
   // script & style
-  $search[0] = '<ul class="commentsList">';
-  $replace[0] = '
-{combine_script id=\'insertAtCaret\' require=\'jquery\' path=$REPLYTO_PATH|@cat:\'insertAtCaret.js\'}
+  $content.= '
+{combine_script id=\'insertAtCaret\' require=\'jquery\' path=$REPLYTO_PATH|cat:\'insertAtCaret.js\'}
 
 {footer_script require=\'insertAtCaret\'}
-function replyTo(commentID, author) {ldelim}
-  jQuery("#{$replyto_form_name} textarea").insertAtCaret("[reply=" + commentID + "]" + author + "[/reply] ");
+function replyTo(commentID, author) {
+  jQuery("#{$replyto_form_name} textarea").insertAtCaret("[reply=" + commentID + "]" + author + "[/reply] ").focus();
 }
 {/footer_script}
 
-{html_head}
-<style type="text/css">
-  .replyTo {ldelim}
-    display:none;
-    background:url({$ROOT_URL}{$REPLYTO_PATH}reply.png) left top no-repeat;
-    height:16px;
-    margin-left:20px;
-    padding-left:20px;
-  }
-  li.commentElement:hover .replyTo {ldelim}
-    display:inline;
-  }
-  .replyTo:hover {ldelim}
-    background-position:left -16px;
-  }
-</style>
-{/html_head}'
-.$search[0];
+{html_style}
+.replyTo {
+  display:none;
+  background:url({$ROOT_URL}{$REPLYTO_PATH}reply.png) left top no-repeat;
+  height:16px;
+  margin-left:20px;
+  padding-left:20px;
+}
+li.commentElement:hover .replyTo {
+  display:inline;
+}
+.replyTo:hover {
+  background-position:left -16px;
+}
+{/html_style}';
 
   // button
   $search[1] = '<span class="commentDate">{$comment.DATE}</span>';
@@ -187,7 +164,7 @@ function replyTo(commentID, author) {ldelim}
 
 
 /**
- * Replace BBcode tag by a link with absolute url
+ * Replace reply tag by a link with absolute url
  */
 function replyto_parse($comment, $in_album = false)
 {
@@ -299,5 +276,3 @@ function replyto_parse_album_mail($comment)
   $comment['content'] = replyto_parse($comment['content'], 'album');
   return $comment;
 }
-
-?>
