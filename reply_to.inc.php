@@ -47,8 +47,6 @@ function replyto_add_link()
           ).'#commentform';
       }
       
-      var_dump($replyto_links);
-      
       $template->assign('replyto_links', $replyto_links);
       $template->set_prefilter('comments', 'replyto_add_link_comments_prefilter');
     }
