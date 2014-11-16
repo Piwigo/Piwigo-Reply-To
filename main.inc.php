@@ -10,10 +10,20 @@ Author URI: http://www.strangeplanet.fr
 
 defined('PHPWG_ROOT_PATH') or die('Hacking attempt!');
 
+if (basename(dirname(__FILE__)) != 'reply_to')
+{
+  add_event_handler('init', 'reply_to_error');
+  function reply_to_error()
+  {
+    global $page;
+    $page['errors'][] = 'Reply To folder name is incorrect, uninstall the plugin and rename it to "reply_to"';
+  }
+  return;
+}
+
 global $page;
 
-define('REPLYTO_ID' ,   basename(dirname(__FILE__)));
-define('REPLYTO_PATH' , PHPWG_PLUGINS_PATH . REPLYTO_ID . '/');
+define('REPLYTO_PATH' , PHPWG_PLUGINS_PATH . 'reply_to/');
 
 add_event_handler('init', 'replyto_init');
 
