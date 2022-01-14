@@ -110,7 +110,7 @@ li.commentElement:hover .replyTo {
 /**
  * reply buttons on picture.php and index.php pages
  */
-function replyto_add_link_prefilter($content, &$smarty)
+function replyto_add_link_prefilter($content)
 {
   // script & style
   $content.= '
