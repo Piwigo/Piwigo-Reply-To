@@ -48,7 +48,7 @@ function replyto_add_link()
       }
 
       $template->assign('replyto_links', $replyto_links);
-      $template->set_prefilter('comments', 'replyto_add_link_comments_prefilter');
+      $template->set_prefilter('comment_list', 'replyto_add_link_comments_prefilter');
     }
   }
   /* PICTURE page */
@@ -56,7 +56,7 @@ function replyto_add_link()
     add_event_handler('user_comment_insertion', 'replyto_parse_picture_mail');
 
     if (!is_a_guest() or $conf['comments_forall']) {
-      $template->set_prefilter('picture', 'replyto_add_link_prefilter');
+      $template->set_prefilter('comment_list', 'replyto_add_link_prefilter');
     }
   }
   /* ALBUM page */
