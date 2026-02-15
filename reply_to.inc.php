@@ -23,7 +23,7 @@ function replyto_add_link()
 
   $indexSection = (script_basename() == 'index' and isset($page['section']));
   $commentsOnAlbums = isset($pwg_loaded_plugins['Comments_on_Albums']);
-  $sectionPage = ($page['section'] == 'categories' and isset($page['category']));
+  $sectionPage = (isset($page['section']) && $page['section'] == 'categories' && isset($page['category']));
   $albumPageCondition = $indexSection and $commentsOnAlbums and $sectionPage;
 
 
@@ -31,7 +31,7 @@ function replyto_add_link()
   if (script_basename() == 'comments') {
     if (!is_a_guest() or $conf['comments_forall']) {
       $comments = $template->get_template_vars('comments');
-      if (!count($comments)) {
+    if (empty($comments) || (!is_array($comments) && !($comments instanceof Countable)) || count($comments) === 0) {
         return;
       }
 
